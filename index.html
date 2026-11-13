@@ -79,7 +79,7 @@ nav a:hover { color: var(--text); text-decoration: none; }
 /* toolbar */
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
 .toolbar { position: relative; z-index: 2; margin-top: -22px; padding: 14px; display: grid;
-           grid-template-columns: minmax(220px, 2.2fr) repeat(4, minmax(130px, 1fr)) auto; gap: 10px; align-items: center; }
+           grid-template-columns: minmax(200px, 2fr) repeat(5, minmax(120px, 1fr)) auto; gap: 10px; align-items: center; }
 .field { position: relative; display: block; }
 .field svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--faint); }
 input[type=search], select { width: 100%; font: inherit; font-size: 14px; color: var(--text); background-color: var(--surface-2);
@@ -177,7 +177,7 @@ body.open { overflow: hidden; }
 .drawer .close { all: unset; margin-left: auto; cursor: pointer; width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; color: var(--muted); flex: none; }
 .drawer .close:hover { background: var(--surface-2); }
 .drawer .body { padding: 20px 22px; overflow-y: auto; flex: 1; }
-.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.kpis { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
 .kpi { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
 .kpi small { display: block; color: var(--muted); font-size: 12px; }
 .kpi strong { font-size: 20px; font-variant-numeric: tabular-nums; }
@@ -269,6 +269,10 @@ footer p { margin: 0 0 10px; }
     <select id="minYears" aria-label="Years unpaid">
       <option value="0">Any years unpaid</option><option value="2">2+ years unpaid</option>
       <option value="3">3+ years unpaid</option><option value="5">5+ years unpaid</option><option value="10">10+ years unpaid</option>
+    </select>
+    <select id="minAcres" aria-label="Lot size">
+      <option value="0">Any lot size</option><option value="1">1+ acres</option><option value="5">5+ acres</option>
+      <option value="10">10+ acres</option><option value="40">40+ acres</option>
     </select>
     <select id="built" aria-label="Property type">
       <option value="">Land &amp; buildings</option><option value="house">Has a building</option><option value="land">Land only</option>
@@ -390,8 +394,10 @@ const dash = '<span class="none">–</span>';
 
 function apply() {
   const q = $("q").value.trim().toLowerCase(), county = $("county").value, minYears = +$("minYears").value, built = $("built").value;
+  const minAcres = +$("minAcres").value;
   view = rows.filter(r => (!group || r._g === group) && (!county || r.county === county)
     && (!minYears || (r.years_unpaid || 0) >= minYears)
+    && (!minAcres || (r.acres || 0) >= minAcres)
     && (!built || (built === "house") === !!(r.year_built || r.living_sqft))
     && (!q || r._text.includes(q)));
   view.sort((a, b) => {
@@ -431,6 +437,7 @@ function render() {
   const chips = [];
   if ($("county").value) chips.push(["county", `${$("county").value} County`]);
   if (+$("minYears").value) chips.push(["minYears", $("minYears").selectedOptions[0].text]);
+  if (+$("minAcres").value) chips.push(["minAcres", $("minAcres").selectedOptions[0].text]);
   if ($("built").value) chips.push(["built", $("built").selectedOptions[0].text]);
   if ($("q").value.trim()) chips.push(["q", `“${$("q").value.trim()}”`]);
   if (document.body.classList.contains("mapview")) drawMap();
@@ -460,6 +467,7 @@ function openDrawer(r) {
   ].filter(Boolean).join("");
   $("dBody").innerHTML = `
     <div class="kpis">
+      <div class="kpi"><small>Lot size</small><strong>${r.acres ? `${(+r.acres).toFixed(2)} ac` : "–"}</strong></div>
       <div class="kpi"><small>Taxes owed</small><strong>${r.total_due ? usd.format(r.total_due) : "–"}</strong></div>
       <div class="kpi"><small>Years unpaid</small><strong>${r.years_unpaid || "–"}</strong></div>
     </div>
@@ -528,7 +536,7 @@ $("headMap").onclick = () => {
 };
 $("listBtn").onclick = () => setView("list");
 $("mapBtn").onclick = () => setView("map");
-["county", "minYears", "built"].forEach(id => $(id).addEventListener("input", () => { if (map) setTimeout(() => drawMap(true), 0); }));
+["county", "minYears", "minAcres", "built"].forEach(id => $(id).addEventListener("input", () => { if (map) setTimeout(() => drawMap(true), 0); }));
 document.addEventListener("click", e => { if (e.target.closest("#stats .stat") && map) setTimeout(() => drawMap(true), 0); });
 
 function csv() {
@@ -541,13 +549,13 @@ function csv() {
 }
 
 $("stats").addEventListener("click", e => { const s = e.target.closest(".stat"); if (s) { group = s.dataset.g; page = 0; apply(); } });
-["q", "county", "minYears", "built"].forEach(id => $(id).addEventListener("input", () => { page = 0; apply(); }));
+["q", "county", "minYears", "minAcres", "built"].forEach(id => $(id).addEventListener("input", () => { page = 0; apply(); }));
 $("sort").addEventListener("input", () => { const [k, d] = $("sort").value.split(":"); sortKey = k; sortDir = +d; apply(); });
 document.querySelector("thead").addEventListener("click", e => {
   const k = e.target.closest("th")?.dataset.k; if (!k) return;
   sortDir = k === sortKey ? -sortDir : (["owner", "county", "category"].includes(k) ? 1 : -1); sortKey = k; apply();
 });
-$("chips").addEventListener("click", e => { const k = e.target.dataset?.k; if (!k) return; $(k).value = k === "minYears" ? "0" : ""; page = 0; apply(); });
+$("chips").addEventListener("click", e => { const k = e.target.dataset?.k; if (!k) return; $(k).value = ["minYears", "minAcres"].includes(k) ? "0" : ""; page = 0; apply(); });
 const pick = e => { const el = e.target.closest("[data-i]"); if (el) openDrawer(view[+el.dataset.i]); };
 $("tbody").addEventListener("click", pick); $("cards").addEventListener("click", pick);
 $("cards").addEventListener("keydown", e => { if (e.key === "Enter") pick(e); });
