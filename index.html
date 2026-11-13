@@ -192,6 +192,7 @@ dl.facts dd { margin: 0; overflow-wrap: anywhere; }
 .actions .btn { justify-content: center; }
 .howbuy { border: 1px solid var(--line); border-left: 4px solid var(--brand-2); border-radius: 10px; padding: 14px 16px; margin: 0 0 20px; }
 .howbuy h4 { margin: 0 0 6px; font-size: 14px; }
+.howbuy.util { border-left-color: #1f9d6b; }
 .howbuy p, .howbuy li { font-size: 13.5px; color: var(--muted); margin: 0; }
 .howbuy ul { margin: 6px 0 0; padding-left: 18px; }
 .howbuy li + li { margin-top: 4px; }
@@ -285,9 +286,10 @@ footer p { margin: 0 0 10px; }
       <option value="">Any lot size</option><option value="0-1">Under 1 acre</option><option value="1-5">1 – 5 acres</option>
       <option value="5-10">5 – 10 acres</option><option value="10-40">10 – 40 acres</option><option value="40-">40+ acres</option>
     </select>
-    <select id="built" aria-label="Property type">
+    <select id="built" aria-label="Property features">
       <option value="">Land &amp; buildings</option><option value="house">Has a building</option><option value="land">Vacant land</option>
-      <option value="lake">Lakefront</option>
+      <option value="lake">Lakefront</option><option value="city">Inside city limits</option>
+      <option value="district">Sewer or water district</option>
     </select>
     <select id="sort" aria-label="Sort">
       <option value="total_due:-1">Most taxes owed</option><option value="years_unpaid:-1">Most years unpaid</option>
@@ -411,7 +413,8 @@ const builtLabel = r => {
   return /home|housing|family|condo|duplex|unit|building/i.test(kind) ? kind : `${kind} building`;   // "Residential" -> "Residential building"
 };
 const tags = r => {
-  const t = [builtLabel(r) && `<span class="tag">${esc(builtLabel(r))}</span>`, r.lakefront && `<span class="tag lake">Lakefront</span>`].filter(Boolean);
+  const t = [builtLabel(r) && `<span class="tag">${esc(builtLabel(r))}</span>`, r.lakefront && `<span class="tag lake">Lakefront</span>`,
+             r.city && `<span class="tag">${esc(r.city)} city limits</span>`].filter(Boolean);
   return t.length ? `<div class="tags">${t.join("")}</div>` : "";
 };
 
@@ -421,7 +424,8 @@ function apply() {
   view = rows.filter(r => (!group || r._g === group) && (!county || r.county === county)
     && (!minYears || (r.years_unpaid || 0) >= minYears)
     && (loAc === null || (r.acres != null && r.acres >= loAc && r.acres < hiAc))
-    && (!built || (built === "house" && r.improved === true) || (built === "land" && r.improved === false) || (built === "lake" && r.lakefront === true))
+    && (!built || (built === "house" && r.improved === true) || (built === "land" && r.improved === false) || (built === "lake" && r.lakefront === true)
+        || (built === "city" && !!r.city) || (built === "district" && !!(r.sewer_district || r.water_district)))
     && (!q || r._text.includes(q)));
   view.sort((a, b) => {
     const x = a[sortKey], y = b[sortKey];
@@ -478,7 +482,7 @@ function openDrawer(r) {
     ["Parcel", `<span class="mono">${esc(r.parcel)}</span>`], ["Status", esc(r.category)],
     ["Improvements", r.improved === true ? `Has a building${r.structure ? ` (${esc(r.structure)})` : ""}` : r.improved === false ? `Vacant land${r.structure ? ` (${esc(r.structure)})` : ""}` : "Not recorded by this county"],
     ["Lakefront", r.lakefront ? "Yes" : null],
-    ["Utilities", "Not in county records. Check with the electric co-op, water/sewer district or the county planning office."],
+
     ["Property address", r.property_address ? esc(nice(r.property_address)) : null], ["Legal description", r.legal ? esc(r.legal) : null],
     ["Area", r.location ? esc(nice(r.location)) : null], ["Acres", r.acres ? (+r.acres).toFixed(2) : null],
     ["Year built", r.year_built || null], ["Living area", r.living_sqft ? `${num.format(r.living_sqft)} sq ft` : null],
@@ -504,6 +508,7 @@ function openDrawer(r) {
       <div class="kpi"><small>Years unpaid</small><strong>${r.years_unpaid || "–"}</strong></div>
     </div>
     ${howToBuy(r)}
+    ${utilities(r)}
     ${listing}
     <dl class="facts">${facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
     <div class="actions">${links}</div>
@@ -511,6 +516,16 @@ function openDrawer(r) {
   $("copyParcel").onclick = e => { navigator.clipboard?.writeText(r.parcel); e.target.textContent = "Copied"; };
   document.body.classList.add("open");
   $("dClose").focus();
+}
+function utilities(r) {
+  const items = [];
+  if (r.city) items.push(`<li><b>Inside ${esc(r.city)} city limits.</b> City water and sewer are often available; confirm with the city.</li>`);
+  if (r.sewer_district) items.push(`<li><b>In the ${esc(nice(r.sewer_district))}.</b> Public sewer likely available; confirm a hookup with the district.</li>`);
+  if (r.water_district) items.push(`<li><b>In ${esc(r.water_district)}.</b> Public water likely available; confirm with the district.</li>`);
+  if (r.improved === true) items.push(`<li><b>Has a building,</b> so electric service was likely connected at some point.</li>`);
+  if (!r.city && !r.sewer_district && !r.water_district) items.push(`<li>Outside city limits and known districts: likely a private well and septic system, if any.</li>`);
+  return `<div class="howbuy util"><h4>Utility signals</h4><ul>${items.join("")}</ul>
+    <p style="margin-top:8px">Hints from county maps, not a guarantee of service. Confirm with the electric co-op, water/sewer provider or county planning office.</p></div>`;
 }
 function howToBuy(r) {
   const owner = (r.owner || "").toUpperCase();
@@ -572,7 +587,7 @@ function drawMap(fit) {
     const m = L.circleMarker([r.lat, r.lon], { radius: 7, weight: 2, color: "#fff", fillColor: COLORS[r._g], fillOpacity: .95 });
     m.bindPopup(() => {
       const el = document.createElement("div"); el.className = "pop";
-      el.innerHTML = `${badge(r)}<div class="place">${esc(r._place)}</div><div class="sub">${esc(r.county)} County${builtLabel(r) ? " · " + esc(builtLabel(r)) : ""}${r.lakefront ? " · Lakefront" : ""}</div>
+      el.innerHTML = `${badge(r)}<div class="place">${esc(r._place)}</div><div class="sub">${r.city ? esc(r.city) + ", " : ""}${esc(r.county)} County${builtLabel(r) ? " · " + esc(builtLabel(r)) : ""}${r.lakefront ? " · Lakefront" : ""}</div>
         <div class="figs"><div><small>Taxes owed</small><b>${r.total_due ? usd.format(r.total_due) : "–"}</b></div>
         <div><small>Years unpaid</small><b>${r.years_unpaid || "–"}</b></div>${r.acres ? `<div><small>Acres</small><b>${(+r.acres).toFixed(2)}</b></div>` : ""}</div>
         <button class="btn" type="button">View details</button>`;
@@ -596,7 +611,7 @@ document.addEventListener("click", e => { if (e.target.closest("#stats .stat") &
 
 function csv() {
   const cols = ["county", "category", "parcel", "property_address", "location", "legal", "acres", "year_built",
-                "living_sqft", "improved", "structure", "lakefront", "assessed_value", "years_unpaid", "oldest_unpaid", "total_due", "last_sale"];
+                "living_sqft", "improved", "structure", "lakefront", "city", "sewer_district", "water_district", "assessed_value", "years_unpaid", "oldest_unpaid", "total_due", "last_sale"];
   const q = v => v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
   const text = [cols.join(","), ...view.map(r => cols.map(c => q(r[c])).join(","))].join("\n");
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([text], { type: "text/csv" })), download: "lake-ozark-leads.csv" });
