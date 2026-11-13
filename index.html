@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camden County Property Leads</title>
+<meta name="description" content="Bank-owned and tax-delinquent properties in Camden County, Missouri, from public county records.">
+<style>
+  :root { --bg: #fafaf8; --card: #fff; --text: #1d1d1b; --muted: #6b6b66; --line: #e4e3de;
+          --accent: #2a6fdb; --bank: #8a4fd1; --gov: #c98500; --delq: #d0473a; --fourth: #8f2b22; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --card: #1f1f1d; --text: #ecebe6; --muted: #a09f98; --line: #34332f;
+            --accent: #6aa0ff; --bank: #b58cf0; --gov: #e2a93a; --delq: #f07468; --fourth: #e2675b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header, main, footer { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
+  header { padding-top: 28px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+          cursor: pointer; text-align: left; color: inherit; font: inherit; }
+  .tile.active { outline: 2px solid var(--accent); }
+  .tile b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
+  .tile span { color: var(--muted); font-size: 13px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .controls input, .controls select { font: inherit; padding: 8px 10px; border: 1px solid var(--line);
+          border-radius: 8px; background: var(--card); color: var(--text); }
+  .controls input[type=search] { flex: 1 1 260px; }
+  .controls button { font: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line);
+          background: var(--card); color: var(--text); cursor: pointer; }
+  .count { color: var(--muted); margin-left: auto; }
+  .wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { position: sticky; top: 0; background: var(--card); cursor: pointer; white-space: nowrap; user-select: none; }
+  .nowrap { white-space: nowrap; }
+  td.owner { min-width: 180px; }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th[aria-sort=ascending]::after { content: " ▲"; } th[aria-sort=descending]::after { content: " ▼"; }
+  tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 12px; white-space: nowrap;
+         border: 1px solid currentColor; }
+  .t-bank { color: var(--bank); } .t-gov { color: var(--gov); } .t-delq { color: var(--delq); } .t-fourth { color: var(--fourth); }
+  .muted { color: var(--muted); }
+  a { color: var(--accent); }
+  .pager { display: flex; gap: 8px; align-items: center; justify-content: center; padding: 14px; }
+  footer { color: var(--muted); font-size: 13px; padding-top: 18px; padding-bottom: 40px; }
+  @media (max-width: 700px) { .hide-sm { display: none; } h1 { font-size: 22px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Camden County Property Leads</h1>
+  <p class="sub">Bank-owned properties and parcels with two or more years of unpaid property taxes in Camden County, Missouri. <span id="updated"></span></p>
+  <div class="tiles" id="tiles"></div>
+</header>
+<main>
+  <div class="controls">
+    <input type="search" id="q" placeholder="Search owner, parcel, address, subdivision…" aria-label="Search">
+    <select id="minYears" aria-label="Minimum years unpaid">
+      <option value="0">Any years unpaid</option><option value="2">2+ years unpaid</option>
+      <option value="3">3+ years unpaid</option><option value="5">5+ years unpaid</option><option value="10">10+ years unpaid</option>
+    </select>
+    <select id="built" aria-label="Improvements">
+      <option value="">Land and buildings</option><option value="house">Has a building</option><option value="land">Land only</option>
+    </select>
+    <button id="csv" type="button">Download CSV</button>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="wrap"><table id="t"><thead></thead><tbody></tbody></table></div>
+  <div class="pager"><button id="prev" type="button">‹ Prev</button><span id="page"></span><button id="next" type="button">Next ›</button></div>
+</main>
+<footer>
+  <p><b>Sources:</b> Camden County GIS parcel records and the Camden County Collector's tax portal (public records), updated weekly.
+  <b>Bank-owned</b> means the deedholder is a bank, lender, HUD or the VA; "long held" bank parcels are often branch buildings.
+  <b>Fourth sale</b> parcels were offered at three tax sales without a buyer and can be requested at the Collector's office.
+  <b>Total due</b> includes interest, fees and the current year's bill.</p>
+  <p>Information may be out of date or incomplete. Verify everything with the Camden County Collector (573-346-4440) and Recorder of Deeds before acting. Nothing here is legal or financial advice.</p>
+</footer>
+<script>
+const COLUMNS = [
+  { key: "category", label: "Category" },
+  { key: "parcel", label: "Parcel", cls: "nowrap" },
+  { key: "owner", label: "Owner", cls: "owner" },
+  { key: "property_address", label: "Property address", cls: "hide-sm" },
+  { key: "location", label: "Area", cls: "hide-sm" },
+  { key: "legal", label: "Legal", cls: "hide-sm" },
+  { key: "acres", label: "Acres", num: true },
+  { key: "year_built", label: "Built", num: true, cls: "hide-sm" },
+  { key: "assessed_value", label: "Assessed", num: true, money: true, cls: "hide-sm" },
+  { key: "years_unpaid", label: "Yrs unpaid", num: true },
+  { key: "total_due", label: "Total due", num: true, money: true },
+  { key: "last_sale", label: "Last sale", cls: "hide-sm nowrap" },
+];
+const PAGE = 100;
+const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+let rows = [], view = [], sortKey = "total_due", sortDir = -1, page = 0, group = "";
+
+const groupOf = c => c.startsWith("Bank-owned + ") ? "both" : c.includes("Government") ? "gov"
+  : c.startsWith("Bank-owned (acquired") ? "reo" : c.startsWith("Bank-owned") ? "bank"
+  : c.includes("fourth") ? "fourth" : "delq";
+const GROUPS = [["", "All properties"], ["reo", "Recent bank foreclosures"], ["gov", "HUD / VA owned"],
+  ["delq", "2+ years unpaid taxes"], ["fourth", "Fourth-sale list"], ["both", "Bank-owned and delinquent"],
+  ["bank", "Other bank-owned"]];
+const tagClass = g => ({ reo: "t-bank", bank: "t-bank", both: "t-bank", gov: "t-gov", fourth: "t-fourth" }[g] || "t-delq");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const mapUrl = p => "https://camdengis.integritygis.com/H5/Index.html?viewer=camden&searchField=PID&searchLayer=Parcel&AutoAccept=true&SearchString=" + encodeURIComponent(p);
+
+function cell(r, c) {
+  const v = r[c.key];
+  if (c.key === "category") return `<span class="tag ${tagClass(r._g)}">${esc(v)}</span>`;
+  if (c.key === "parcel") return `<a href="${mapUrl(v)}" target="_blank" rel="noopener">${esc(v)}</a>`;
+  if (v == null || v === "") return '<span class="muted">–</span>';
+  if (c.money) return money.format(v);
+  return esc(v);
+}
+
+function apply() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const minYears = +document.getElementById("minYears").value;
+  const built = document.getElementById("built").value;
+  view = rows.filter(r => (!group || r._g === group)
+    && (!minYears || (r.years_unpaid || 0) >= minYears)
+    && (!built || (built === "house") === !!(r.year_built || r.living_sqft))
+    && (!q || r._text.includes(q)));
+  view.sort((a, b) => {
+    const x = a[sortKey], y = b[sortKey];
+    if (x == null || x === "") return 1; if (y == null || y === "") return -1;
+    return (typeof x === "number" ? x - y : String(x).localeCompare(String(y))) * sortDir;
+  });
+  page = Math.min(page, Math.max(0, Math.ceil(view.length / PAGE) - 1));
+  render();
+}
+
+function render() {
+  const thead = document.querySelector("#t thead"), tbody = document.querySelector("#t tbody");
+  thead.innerHTML = "<tr>" + COLUMNS.map(c => `<th data-k="${c.key}" class="${c.num ? "num " : ""}${c.cls || ""}"`
+    + (c.key === sortKey ? ` aria-sort="${sortDir > 0 ? "ascending" : "descending"}"` : "") + `>${c.label}</th>`).join("") + "</tr>";
+  tbody.innerHTML = view.slice(page * PAGE, (page + 1) * PAGE).map(r => "<tr>" + COLUMNS.map(c =>
+    `<td class="${c.num ? "num " : ""}${c.cls || ""}">${cell(r, c)}</td>`).join("") + "</tr>").join("")
+    || `<tr><td colspan="${COLUMNS.length}" class="muted">No properties match.</td></tr>`;
+  const pages = Math.max(1, Math.ceil(view.length / PAGE));
+  document.getElementById("count").textContent = `${view.length.toLocaleString()} of ${rows.length.toLocaleString()} properties`;
+  document.getElementById("page").textContent = `Page ${page + 1} of ${pages}`;
+  document.getElementById("prev").disabled = page === 0;
+  document.getElementById("next").disabled = page >= pages - 1;
+  document.querySelectorAll("#tiles .tile").forEach(t => t.classList.toggle("active", t.dataset.g === group));
+}
+
+function tiles() {
+  const counts = {}; rows.forEach(r => counts[r._g] = (counts[r._g] || 0) + 1);
+  document.getElementById("tiles").innerHTML = GROUPS.filter(([g]) => !g || counts[g]).map(([g, label]) =>
+    `<button class="tile" type="button" data-g="${g}"><b>${(g ? counts[g] : rows.length).toLocaleString()}</b><span>${label}</span></button>`).join("");
+}
+
+function csv() {
+  const cols = Object.keys(rows[0] || {}).filter(k => !k.startsWith("_"));
+  const q = v => v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+  const text = [cols.join(","), ...view.map(r => cols.map(c => q(r[c])).join(","))].join("\n");
+  const a = Object.assign(document.createElement("a"), {
+    href: URL.createObjectURL(new Blob([text], { type: "text/csv" })), download: "camden-property-leads.csv" });
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+document.querySelector("#t thead").addEventListener("click", e => {
+  const k = e.target.closest("th")?.dataset.k; if (!k) return;
+  sortDir = k === sortKey ? -sortDir : (COLUMNS.find(c => c.key === k).num ? -1 : 1); sortKey = k; apply();
+});
+document.getElementById("tiles").addEventListener("click", e => {
+  const t = e.target.closest(".tile"); if (!t) return; group = t.dataset.g; page = 0; apply();
+});
+["q", "minYears", "built"].forEach(id => document.getElementById(id).addEventListener("input", () => { page = 0; apply(); }));
+document.getElementById("prev").onclick = () => { page--; render(); window.scrollTo(0, 0); };
+document.getElementById("next").onclick = () => { page++; render(); window.scrollTo(0, 0); };
+document.getElementById("csv").onclick = csv;
+
+fetch("data.json", { cache: "no-cache" }).then(r => r.json()).then(d => {
+  document.getElementById("updated").textContent = `Updated ${new Date(d.updated + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`;
+  rows = d.rows.map(r => ({ ...r, _g: groupOf(r.category),
+    _text: [r.owner, r.owner2, r.parcel, r.property_address, r.legal, r.location].join(" ").toLowerCase() }));
+  tiles(); apply();
+}).catch(() => { document.getElementById("count").textContent = "Couldn't load the data."; });
+</script>
+</body>
+</html>
