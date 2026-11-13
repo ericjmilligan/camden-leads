@@ -3,126 +3,345 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Camden County Property Leads</title>
-<meta name="description" content="Bank-owned and tax-delinquent properties in Camden County, Missouri, from public county records.">
+<title>LakeLeads · Bank-Owned &amp; Tax-Delinquent Property, Lake of the Ozarks</title>
+<meta name="description" content="Bank-owned, HUD/VA and tax-delinquent properties across Camden, Miller, Morgan, Benton, Laclede and Dent counties, Missouri. Updated weekly from public county records.">
+<meta property="og:title" content="LakeLeads: Lake of the Ozarks property leads">
+<meta property="og:description" content="Bank-owned and tax-delinquent properties from public county records, updated weekly.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b3b5c'/%3E%3Cpath d='M8 17l8-7 8 7v7H8z' fill='%23fff'/%3E%3Cpath d='M6 25c3-2 5-2 8 0s5 2 8 0 4-2 5-1' stroke='%2337c0c9' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #fafaf8; --card: #fff; --text: #1d1d1b; --muted: #6b6b66; --line: #e4e3de;
-          --accent: #2a6fdb; --bank: #8a4fd1; --gov: #c98500; --delq: #d0473a; --fourth: #8f2b22; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #161615; --card: #1f1f1d; --text: #ecebe6; --muted: #a09f98; --line: #34332f;
-            --accent: #6aa0ff; --bank: #b58cf0; --gov: #e2a93a; --delq: #f07468; --fourth: #e2675b; }
+:root {
+  --bg: #f6f8fa; --surface: #ffffff; --surface-2: #f1f4f7; --text: #0f1b2a; --muted: #5b6b7d; --faint: #8a98a8;
+  --line: #e2e8ef; --brand: #0b3b5c; --brand-2: #0e7c86; --accent: #37c0c9; --focus: #2a7de1;
+  --reo: #6d3fc0; --gov: #b26b00; --delq: #c2412d; --sale: #8c1d18; --bank: #4a5a6c;
+  --reo-bg: #f1ebfb; --gov-bg: #fdf1df; --delq-bg: #fbeae7; --sale-bg: #f8e4e2; --bank-bg: #eef1f4;
+  --shadow: 0 1px 2px rgba(15, 27, 42, .06), 0 4px 16px rgba(15, 27, 42, .06);
+  --radius: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c131b; --surface: #121b25; --surface-2: #17222e; --text: #e8eef4; --muted: #9fb0c1; --faint: #74859a;
+    --line: #233140; --brand: #7cc4f0; --brand-2: #4fd1d9; --accent: #4fd1d9; --focus: #7cc4f0;
+    --reo: #b79cf0; --gov: #f0b45a; --delq: #f08a78; --sale: #f27a72; --bank: #a8b6c5;
+    --reo-bg: #261d38; --gov-bg: #33260f; --delq-bg: #36201c; --sale-bg: #3a1a18; --bank-bg: #1d2834;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  header, main, footer { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
-  header { padding-top: 28px; }
-  h1 { font-size: 26px; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 20px; }
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 18px; }
-  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
-          cursor: pointer; text-align: left; color: inherit; font: inherit; }
-  .tile.active { outline: 2px solid var(--accent); }
-  .tile b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
-  .tile span { color: var(--muted); font-size: 13px; }
-  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
-  .controls input, .controls select { font: inherit; padding: 8px 10px; border: 1px solid var(--line);
-          border-radius: 8px; background: var(--card); color: var(--text); }
-  .controls input[type=search] { flex: 1 1 260px; }
-  .controls button { font: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line);
-          background: var(--card); color: var(--text); cursor: pointer; }
-  .count { color: var(--muted); margin-left: auto; }
-  .wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
-  table { border-collapse: collapse; width: 100%; font-size: 14px; }
-  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
-  th { position: sticky; top: 0; background: var(--card); cursor: pointer; white-space: nowrap; user-select: none; }
-  .nowrap { white-space: nowrap; }
-  td.owner { min-width: 180px; }
-  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  th[aria-sort=ascending]::after { content: " ▲"; } th[aria-sort=descending]::after { content: " ▼"; }
-  tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
-  .tag { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 12px; white-space: nowrap;
-         border: 1px solid currentColor; }
-  .t-bank { color: var(--bank); } .t-gov { color: var(--gov); } .t-delq { color: var(--delq); } .t-fourth { color: var(--fourth); }
-  .muted { color: var(--muted); }
-  a { color: var(--accent); }
-  .pager { display: flex; gap: 8px; align-items: center; justify-content: center; padding: 14px; }
-  footer { color: var(--muted); font-size: 13px; padding-top: 18px; padding-bottom: 40px; }
-  @media (max-width: 700px) { .hide-sm { display: none; } h1 { font-size: 22px; } }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+       -webkit-font-smoothing: antialiased; }
+a { color: var(--brand-2); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
+
+/* header */
+.top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--surface) 88%, transparent);
+       backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 24px; height: 64px; }
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; letter-spacing: -.02em; color: var(--text); }
+.logo:hover { text-decoration: none; }
+.logo svg { width: 32px; height: 32px; }
+.logo b { color: var(--brand-2); font-weight: 800; }
+nav { display: flex; gap: 22px; margin-left: 12px; }
+nav a { color: var(--muted); font-weight: 500; font-size: 14px; }
+nav a:hover { color: var(--text); text-decoration: none; }
+.updated { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);
+           background: var(--surface-2); border: 1px solid var(--line); padding: 6px 12px; border-radius: 99px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #1f9d6b; box-shadow: 0 0 0 3px color-mix(in srgb, #1f9d6b 25%, transparent); }
+
+/* hero */
+.hero { background: linear-gradient(135deg, #0b3b5c 0%, #0e5d72 55%, #0e7c86 100%); color: #fff; position: relative; overflow: hidden; }
+.hero::after { content: ""; position: absolute; inset: auto -10% -60px -10%; height: 140px;
+               background: radial-gradient(60% 100% at 50% 100%, rgba(55,192,201,.35), transparent 70%); }
+.hero .wrap { padding-top: 56px; padding-bottom: 44px; position: relative; z-index: 1; }
+.eyebrow { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+           background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); padding: 5px 12px; border-radius: 99px; }
+.hero h1 { font-size: clamp(30px, 4.4vw, 48px); line-height: 1.08; letter-spacing: -.03em; margin: 18px 0 14px; max-width: 760px; font-weight: 800; }
+.hero p.lede { font-size: 17px; color: rgba(255,255,255,.82); max-width: 640px; margin: 0 0 32px; }
+.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.stat { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: var(--radius);
+        padding: 16px 18px; text-align: left; color: #fff; font: inherit; cursor: pointer; transition: background .15s, transform .15s; }
+.stat:hover { background: rgba(255,255,255,.14); transform: translateY(-1px); }
+.stat.active { background: #fff; color: #0f1b2a; border-color: #fff; }
+.stat.active small { color: #5b6b7d; }
+.stat strong { display: block; font-size: 28px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.stat small { display: block; font-size: 13px; color: rgba(255,255,255,.75); margin-top: 2px; }
+
+/* toolbar */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.toolbar { position: relative; z-index: 2; margin-top: -22px; padding: 14px; display: grid;
+           grid-template-columns: minmax(220px, 2.2fr) repeat(4, minmax(130px, 1fr)) auto; gap: 10px; align-items: center; }
+.field { position: relative; display: block; }
+.field svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--faint); }
+input[type=search], select { width: 100%; font: inherit; font-size: 14px; color: var(--text); background-color: var(--surface-2);
+       border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; appearance: none; }
+input[type=search] { padding-left: 36px; }
+select { padding-right: 32px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a98a8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+         background-repeat: no-repeat; background-position: right 12px center; }
+.btn { font: inherit; font-size: 14px; font-weight: 600; border-radius: 9px; padding: 10px 14px; cursor: pointer; white-space: nowrap;
+       border: 1px solid var(--line); background: var(--surface); color: var(--text); display: inline-flex; align-items: center; gap: 8px; }
+.btn:hover { background: var(--surface-2); text-decoration: none; }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+@media (prefers-color-scheme: dark) { .btn.primary { color: #0c131b; } }
+.btn.primary:hover { filter: brightness(1.1); background: var(--brand); }
+.btn svg { width: 16px; height: 16px; }
+
+.resultbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 26px 2px 12px; flex-wrap: wrap; }
+.resultbar h2 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+.resultbar .count { color: var(--muted); font-size: 14px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-size: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 4px 6px 4px 10px; color: var(--muted); }
+.chip button { all: unset; cursor: pointer; margin-left: 4px; padding: 0 4px; color: var(--faint); }
+
+/* table */
+.tablewrap { overflow: hidden; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+thead th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em;
+           padding: 12px 14px; background: var(--surface-2); border-bottom: 1px solid var(--line); cursor: pointer; white-space: nowrap; user-select: none; }
+thead th.num, td.num { text-align: right; }
+thead th[aria-sort=descending]::after { content: " ↓"; color: var(--brand-2); }
+thead th[aria-sort=ascending]::after { content: " ↑"; color: var(--brand-2); }
+tbody td { padding: 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+#tbody tr { cursor: pointer; transition: background .1s; }
+#tbody tr:hover { background: color-mix(in srgb, var(--brand-2) 5%, transparent); }
+tbody tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.owner { font-weight: 600; }
+.sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: var(--faint); white-space: nowrap; margin-top: 2px; }
+.due { font-weight: 700; }
+.none { color: var(--faint); }
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.b-reo { color: var(--reo); background: var(--reo-bg); } .b-gov { color: var(--gov); background: var(--gov-bg); }
+.b-delq { color: var(--delq); background: var(--delq-bg); } .b-sale { color: var(--sale); background: var(--sale-bg); }
+.b-bank { color: var(--bank); background: var(--bank-bg); }
+.county { font-size: 13px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.years { display: inline-flex; align-items: center; gap: 8px; }
+.bar { width: 44px; height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--delq); border-radius: 99px; }
+
+.cards { display: none; }
+.card { padding: 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.card:last-child { border-bottom: 0; }
+.card .row1 { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.card .meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.card .meta b { color: var(--text); font-weight: 600; }
+
+.pager { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); gap: 10px; }
+.pager .btns { display: flex; gap: 8px; }
+.empty { padding: 48px 20px; text-align: center; color: var(--muted); }
+
+/* drawer */
+.scrim { position: fixed; inset: 0; background: rgba(8, 15, 24, .45); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 40; }
+.drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(480px, 100%); background: var(--surface); z-index: 41; visibility: hidden;
+          transform: translateX(100%); transition: transform .25s ease, visibility .25s; display: flex; flex-direction: column; box-shadow: -8px 0 32px rgba(0,0,0,.15); }
+body.open .scrim { opacity: 1; pointer-events: auto; }
+body.open .drawer { transform: none; visibility: visible; }
+body.open { overflow: hidden; }
+.drawer header { padding: 20px 22px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: flex-start; }
+.drawer header h3 { margin: 8px 0 4px; font-size: 20px; letter-spacing: -.01em; line-height: 1.25; }
+.drawer .close { all: unset; margin-left: auto; cursor: pointer; width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; color: var(--muted); flex: none; }
+.drawer .close:hover { background: var(--surface-2); }
+.drawer .body { padding: 20px 22px; overflow-y: auto; flex: 1; }
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.kpi { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.kpi small { display: block; color: var(--muted); font-size: 12px; }
+.kpi strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+dl.facts { display: grid; grid-template-columns: 140px 1fr; gap: 10px 14px; margin: 0 0 22px; font-size: 14px; }
+dl.facts dt { color: var(--muted); }
+dl.facts dd { margin: 0; overflow-wrap: anywhere; }
+.actions { display: grid; gap: 8px; }
+.actions .btn { justify-content: center; }
+.note { font-size: 12.5px; color: var(--muted); background: var(--surface-2); border-radius: 10px; padding: 12px 14px; margin-top: 18px; }
+
+/* sections */
+section.info { padding: 64px 0 8px; }
+section.info h2 { font-size: 26px; letter-spacing: -.02em; margin: 0 0 6px; }
+section.info p.intro { color: var(--muted); margin: 0 0 24px; max-width: 680px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.tile { padding: 22px; }
+.tile .num { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; font-weight: 700; color: #fff; background: var(--brand-2); margin-bottom: 12px; }
+.tile h3 { margin: 12px 0 6px; font-size: 16px; }
+.tile .num + h3 { margin-top: 0; }
+.tile p { margin: 0; color: var(--muted); font-size: 14px; }
+.coverage th { cursor: default; }
+footer { margin-top: 64px; border-top: 1px solid var(--line); background: var(--surface); }
+footer .wrap { padding-top: 28px; padding-bottom: 36px; display: grid; grid-template-columns: 1.2fr 2fr; gap: 32px; font-size: 13px; color: var(--muted); }
+footer p { margin: 0 0 10px; }
+
+@media (max-width: 1000px) {
+  .stats { grid-template-columns: repeat(3, 1fr); }
+  .toolbar { grid-template-columns: 1fr 1fr; }
+  .toolbar .field.search { grid-column: 1 / -1; }
+  .grid4 { grid-template-columns: 1fr 1fr; }
+  nav { display: none; }
+}
+@media (max-width: 760px) {
+  .wrap { padding: 0 16px; }
+  .hero .wrap { padding-top: 36px; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stat:first-child { grid-column: 1 / -1; }
+  .stat strong { font-size: 22px; }
+  .tablewrap > table { display: none; }
+  .cards { display: block; }
+  .grid3, .grid4 { grid-template-columns: 1fr; }
+  footer .wrap { grid-template-columns: 1fr; }
+  .updated .long { display: none; }
+  dl.facts { grid-template-columns: 110px 1fr; }
+  .coverage td:nth-child(4), .coverage th:nth-child(4) { display: none; }
+}
 </style>
 </head>
 <body>
-<header>
-  <h1>Camden County Property Leads</h1>
-  <p class="sub">Bank-owned properties and parcels with two or more years of unpaid property taxes in Camden County, Missouri. <span id="updated"></span></p>
-  <div class="tiles" id="tiles"></div>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#" aria-label="LakeLeads home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0b3b5c"/><path d="M8 17l8-7 8 7v7H8z" fill="#fff"/><path d="M6 25c3-2 5-2 8 0s5 2 8 0 4-2 5-1" stroke="#37c0c9" stroke-width="2" fill="none"/></svg>
+      <span>Lake<b>Leads</b></span>
+    </a>
+    <nav aria-label="Sections">
+      <a href="#properties">Properties</a>
+      <a href="#how">How it works</a>
+      <a href="#coverage">Coverage</a>
+    </nav>
+    <div class="updated"><span class="dot" aria-hidden="true"></span><span class="long">Data updated&nbsp;</span><span id="updated">…</span></div>
+  </div>
 </header>
-<main>
-  <div class="controls">
-    <input type="search" id="q" placeholder="Search owner, parcel, address, subdivision…" aria-label="Search">
-    <select id="minYears" aria-label="Minimum years unpaid">
+
+<section class="hero">
+  <div class="wrap">
+    <span class="eyebrow">Lake of the Ozarks · Missouri</span>
+    <h1>Bank-owned and tax-delinquent properties, in one place.</h1>
+    <p class="lede">Foreclosures, HUD and VA homes, and parcels two or more years behind on property taxes across six counties. Pulled from public county records and refreshed every week.</p>
+    <div class="stats" id="stats" role="group" aria-label="Filter by category"></div>
+  </div>
+</section>
+
+<main class="wrap" id="properties">
+  <div class="panel toolbar">
+    <label class="field search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="search" id="q" placeholder="Search owner, address, parcel, subdivision" aria-label="Search">
+    </label>
+    <select id="county" aria-label="County"><option value="">All counties</option></select>
+    <select id="minYears" aria-label="Years unpaid">
       <option value="0">Any years unpaid</option><option value="2">2+ years unpaid</option>
       <option value="3">3+ years unpaid</option><option value="5">5+ years unpaid</option><option value="10">10+ years unpaid</option>
     </select>
-    <select id="built" aria-label="Improvements">
-      <option value="">Land and buildings</option><option value="house">Has a building</option><option value="land">Land only</option>
+    <select id="built" aria-label="Property type">
+      <option value="">Land &amp; buildings</option><option value="house">Has a building</option><option value="land">Land only</option>
     </select>
-    <button id="csv" type="button">Download CSV</button>
-    <span class="count" id="count"></span>
+    <select id="sort" aria-label="Sort">
+      <option value="total_due:-1">Most taxes owed</option><option value="years_unpaid:-1">Most years unpaid</option>
+      <option value="assessed_value:-1">Highest assessed value</option><option value="acres:-1">Largest acreage</option>
+      <option value="last_sale:-1">Recently acquired</option><option value="owner:1">Owner A–Z</option>
+    </select>
+    <button class="btn primary" id="csv" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3"/></svg>Export CSV
+    </button>
   </div>
-  <div class="wrap"><table id="t"><thead></thead><tbody></tbody></table></div>
-  <div class="pager"><button id="prev" type="button">‹ Prev</button><span id="page"></span><button id="next" type="button">Next ›</button></div>
+
+  <div class="resultbar">
+    <div><h2 id="resultTitle">All properties</h2><div class="count" id="count">Loading…</div></div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="panel tablewrap">
+    <table>
+      <thead><tr>
+        <th data-k="category">Status</th><th data-k="owner">Owner &amp; property</th><th data-k="county">County</th>
+        <th data-k="acres" class="num">Acres</th><th data-k="assessed_value" class="num">Assessed</th>
+        <th data-k="years_unpaid" class="num">Years unpaid</th><th data-k="total_due" class="num">Taxes owed</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="cards" id="cards"></div>
+    <div class="pager"><span id="pageinfo"></span><div class="btns"><button class="btn" id="prev" type="button">Previous</button><button class="btn" id="next" type="button">Next</button></div></div>
+  </div>
+
+  <section class="info" id="how">
+    <h2>How it works</h2>
+    <p class="intro">Every Saturday we pull owner records from each county's GIS and tax records from each county collector, then flag the properties worth a closer look.</p>
+    <div class="grid4">
+      <div class="panel tile"><span class="badge b-reo">Recent foreclosure</span><h3>Bank-owned</h3><p>Title held by a bank, mortgage servicer or credit union, acquired in the last three years. Usually a foreclosure (REO).</p></div>
+      <div class="panel tile"><span class="badge b-gov">HUD / VA</span><h3>Government-owned</h3><p>Homes held by HUD, the VA, Fannie Mae or Freddie Mac after a foreclosure. Usually sold through agency listing sites.</p></div>
+      <div class="panel tile"><span class="badge b-delq">2+ yrs unpaid</span><h3>Tax-delinquent</h3><p>Two or more years of property taxes unpaid. Owners are often motivated, and the parcel may go to the August tax sale.</p></div>
+      <div class="panel tile"><span class="badge b-sale">Unsold at tax sale</span><h3>Fourth-sale list</h3><p>Offered at three tax sales with no buyer. Missouri residents can request these at the county collector's office.</p></div>
+    </div>
+    <div class="grid3" style="margin-top:16px">
+      <div class="panel tile"><div class="num">1</div><h3>Find</h3><p>Filter by county, status, years behind and land vs. buildings. Click any property for the full record.</p></div>
+      <div class="panel tile"><div class="num">2</div><h3>Verify</h3><p>Open the county map and the collector's site from the property panel. Records change; always confirm before acting.</p></div>
+      <div class="panel tile"><div class="num">3</div><h3>Act</h3><p>Contact the owner, bid at the tax sale (fourth Monday in August), or watch for the listing. Talk to a real-estate attorney first.</p></div>
+    </div>
+  </section>
+
+  <section class="info" id="coverage">
+    <h2>Coverage</h2>
+    <p class="intro">What each county's public records currently let us show.</p>
+    <div class="panel tablewrap">
+      <table class="coverage"><thead><tr><th>County</th><th>What's included</th><th class="num">Properties</th><th>Collector</th></tr></thead><tbody id="coverageBody"></tbody></table>
+    </div>
+  </section>
 </main>
+
 <footer>
-  <p><b>Sources:</b> Camden County GIS parcel records and the Camden County Collector's tax portal (public records), updated weekly.
-  <b>Bank-owned</b> means the deedholder is a bank, lender, HUD or the VA; "long held" bank parcels are often branch buildings.
-  <b>Fourth sale</b> parcels were offered at three tax sales without a buyer and can be requested at the Collector's office.
-  <b>Total due</b> includes interest, fees and the current year's bill.</p>
-  <p>Information may be out of date or incomplete. Verify everything with the Camden County Collector (573-346-4440) and Recorder of Deeds before acting. Nothing here is legal or financial advice.</p>
+  <div class="wrap">
+    <div>
+      <a class="logo" href="#" aria-label="LakeLeads home"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0b3b5c"/><path d="M8 17l8-7 8 7v7H8z" fill="#fff"/><path d="M6 25c3-2 5-2 8 0s5 2 8 0 4-2 5-1" stroke="#37c0c9" stroke-width="2" fill="none"/></svg><span>Lake<b>Leads</b></span></a>
+      <p style="margin-top:12px">Property leads for the Lake of the Ozarks region, from public county records.</p>
+    </div>
+    <div>
+      <p><b>Sources.</b> County GIS parcel records and county collector tax records for Camden, Miller, Morgan, Benton, Laclede and Dent counties, Missouri, refreshed weekly.</p>
+      <p><b>Disclaimer.</b> Information may be incomplete or out of date. Tax amounts include interest, fees and the current year's bill. Verify everything with the county collector and recorder of deeds before acting. Nothing here is legal, tax or financial advice.</p>
+    </div>
+  </div>
 </footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+  <header>
+    <div><span id="dBadge"></span><h3 id="dTitle"></h3><div class="sub" id="dSub"></div></div>
+    <button class="close" id="dClose" type="button" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </header>
+  <div class="body" id="dBody"></div>
+</aside>
+
 <script>
-const COLUMNS = [
-  { key: "category", label: "Category" },
-  { key: "parcel", label: "Parcel", cls: "nowrap" },
-  { key: "owner", label: "Owner", cls: "owner" },
-  { key: "property_address", label: "Property address", cls: "hide-sm" },
-  { key: "location", label: "Area", cls: "hide-sm" },
-  { key: "legal", label: "Legal", cls: "hide-sm" },
-  { key: "acres", label: "Acres", num: true },
-  { key: "year_built", label: "Built", num: true, cls: "hide-sm" },
-  { key: "assessed_value", label: "Assessed", num: true, money: true, cls: "hide-sm" },
-  { key: "years_unpaid", label: "Yrs unpaid", num: true },
-  { key: "total_due", label: "Total due", num: true, money: true },
-  { key: "last_sale", label: "Last sale", cls: "hide-sm nowrap" },
-];
-const PAGE = 100;
-const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-let rows = [], view = [], sortKey = "total_due", sortDir = -1, page = 0, group = "";
+const PAGE = 50;
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const num = new Intl.NumberFormat("en-US");
+const GROUPS = {
+  "": { title: "All properties" },
+  reo: { title: "Recent bank foreclosures", badge: "b-reo", short: "Recent foreclosure" },
+  gov: { title: "HUD, VA, Fannie Mae & Freddie Mac", badge: "b-gov", short: "HUD / VA" },
+  delq: { title: "Tax-delinquent, 2+ years", badge: "b-delq", short: "2+ yrs unpaid" },
+  sale: { title: "Unsold at tax sale", badge: "b-sale", short: "Unsold at tax sale" },
+  bank: { title: "Other bank-owned", badge: "b-bank", short: "Bank-owned" },
+};
+const groupOf = c => c.includes("Government") ? "gov" : c.startsWith("Bank-owned (acquired") ? "reo"
+  : c.startsWith("Bank-owned") ? "bank" : c.includes("unsold") ? "sale" : "delq";
+let rows = [], view = [], counties = {}, page = 0, group = "", sortKey = "total_due", sortDir = -1, current = null;
 
-const groupOf = c => c.startsWith("Bank-owned + ") ? "both" : c.includes("Government") ? "gov"
-  : c.startsWith("Bank-owned (acquired") ? "reo" : c.startsWith("Bank-owned") ? "bank"
-  : c.includes("fourth") ? "fourth" : "delq";
-const GROUPS = [["", "All properties"], ["reo", "Recent bank foreclosures"], ["gov", "HUD / VA owned"],
-  ["delq", "2+ years unpaid taxes"], ["fourth", "Fourth-sale list"], ["both", "Bank-owned and delinquent"],
-  ["bank", "Other bank-owned"]];
-const tagClass = g => ({ reo: "t-bank", bank: "t-bank", both: "t-bank", gov: "t-gov", fourth: "t-fourth" }[g] || "t-delq");
+const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const mapUrl = p => "https://camdengis.integritygis.com/H5/Index.html?viewer=camden&searchField=PID&searchLayer=Parcel&AutoAccept=true&SearchString=" + encodeURIComponent(p);
-
-function cell(r, c) {
-  const v = r[c.key];
-  if (c.key === "category") return `<span class="tag ${tagClass(r._g)}">${esc(v)}</span>`;
-  if (c.key === "parcel") return `<a href="${mapUrl(v)}" target="_blank" rel="noopener">${esc(v)}</a>`;
-  if (v == null || v === "") return '<span class="muted">–</span>';
-  if (c.money) return money.format(v);
-  return esc(v);
-}
+const nice = s => String(s || "").toLowerCase().replace(/\b([a-z])/g, m => m.toUpperCase())
+  .replace(/\b(Llc|Inc|Na|Ii|Iii|Iv|Hud|Va|Us|Usa|Lp|Llp)\b/g, m => m.toUpperCase()).replace(/\bMc([a-z])/g, (m, c) => "Mc" + c.toUpperCase());
+const badge = r => `<span class="badge ${GROUPS[r._g].badge}">${GROUPS[r._g].short}</span>`;
+const mapUrl = r => { const m = (counties[r.county] || {}).map;
+  return m ? m.replace("{parcel}", encodeURIComponent(r.parcel)).replace("{digits}", r.parcel.replace(/\D/g, "")) : ""; };
+const place = r => r.property_address ? nice(r.property_address) : (r.legal || "No street address on record");
+const dash = '<span class="none">–</span>';
 
 function apply() {
-  const q = document.getElementById("q").value.trim().toLowerCase();
-  const minYears = +document.getElementById("minYears").value;
-  const built = document.getElementById("built").value;
-  view = rows.filter(r => (!group || r._g === group)
+  const q = $("q").value.trim().toLowerCase(), county = $("county").value, minYears = +$("minYears").value, built = $("built").value;
+  view = rows.filter(r => (!group || r._g === group) && (!county || r.county === county)
     && (!minYears || (r.years_unpaid || 0) >= minYears)
     && (!built || (built === "house") === !!(r.year_built || r.living_sqft))
     && (!q || r._text.includes(q)));
@@ -136,53 +355,119 @@ function apply() {
 }
 
 function render() {
-  const thead = document.querySelector("#t thead"), tbody = document.querySelector("#t tbody");
-  thead.innerHTML = "<tr>" + COLUMNS.map(c => `<th data-k="${c.key}" class="${c.num ? "num " : ""}${c.cls || ""}"`
-    + (c.key === sortKey ? ` aria-sort="${sortDir > 0 ? "ascending" : "descending"}"` : "") + `>${c.label}</th>`).join("") + "</tr>";
-  tbody.innerHTML = view.slice(page * PAGE, (page + 1) * PAGE).map(r => "<tr>" + COLUMNS.map(c =>
-    `<td class="${c.num ? "num " : ""}${c.cls || ""}">${cell(r, c)}</td>`).join("") + "</tr>").join("")
-    || `<tr><td colspan="${COLUMNS.length}" class="muted">No properties match.</td></tr>`;
+  const slice = view.slice(page * PAGE, (page + 1) * PAGE);
+  $("tbody").innerHTML = slice.map((r, i) => `<tr data-i="${page * PAGE + i}">
+    <td>${badge(r)}</td>
+    <td><div class="owner">${esc(nice(r.owner))}</div><div class="sub">${esc(place(r))}</div><div class="mono">${esc(r.parcel)}</div></td>
+    <td><span class="county">${esc(r.county)}</span></td>
+    <td class="num">${r.acres ? (+r.acres).toFixed(2) : dash}</td>
+    <td class="num">${r.assessed_value ? usd.format(r.assessed_value) : dash}</td>
+    <td class="num">${r.years_unpaid ? `<span class="years">${r.years_unpaid}<span class="bar"><i style="width:${Math.min(100, r.years_unpaid * 6)}%"></i></span></span>` : dash}</td>
+    <td class="num">${r.total_due ? `<span class="due">${usd.format(r.total_due)}</span>` : dash}</td>
+  </tr>`).join("") || `<tr><td colspan="7"><div class="empty">No properties match these filters.</div></td></tr>`;
+  $("cards").innerHTML = slice.map((r, i) => `<div class="card" data-i="${page * PAGE + i}" tabindex="0" role="button">
+    <div class="row1"><div><div class="owner">${esc(nice(r.owner))}</div><div class="sub">${esc(place(r))}</div></div>${badge(r)}</div>
+    <div class="meta"><span>${esc(r.county)} County</span>${r.total_due ? `<span>Owed <b>${usd.format(r.total_due)}</b></span>` : ""}
+      ${r.years_unpaid ? `<span><b>${r.years_unpaid}</b> yrs unpaid</span>` : ""}${r.acres ? `<span><b>${(+r.acres).toFixed(2)}</b> ac</span>` : ""}</div>
+  </div>`).join("") || `<div class="empty">No properties match these filters.</div>`;
   const pages = Math.max(1, Math.ceil(view.length / PAGE));
-  document.getElementById("count").textContent = `${view.length.toLocaleString()} of ${rows.length.toLocaleString()} properties`;
-  document.getElementById("page").textContent = `Page ${page + 1} of ${pages}`;
-  document.getElementById("prev").disabled = page === 0;
-  document.getElementById("next").disabled = page >= pages - 1;
-  document.querySelectorAll("#tiles .tile").forEach(t => t.classList.toggle("active", t.dataset.g === group));
+  const owed = view.reduce((s, r) => s + (r.total_due || 0), 0);
+  $("resultTitle").textContent = GROUPS[group].title;
+  $("count").textContent = `${num.format(view.length)} properties${owed ? ` · ${usd.format(owed)} in unpaid taxes` : ""}`;
+  $("pageinfo").textContent = view.length ? `Showing ${page * PAGE + 1}–${Math.min(view.length, (page + 1) * PAGE)} of ${num.format(view.length)}` : "";
+  $("prev").disabled = page === 0; $("next").disabled = page >= pages - 1;
+  document.querySelectorAll("#stats .stat").forEach(s => s.classList.toggle("active", s.dataset.g === group));
+  document.querySelectorAll("thead th[data-k]").forEach(th => th.dataset.k === sortKey
+    ? th.setAttribute("aria-sort", sortDir > 0 ? "ascending" : "descending") : th.removeAttribute("aria-sort"));
+  const chips = [];
+  if ($("county").value) chips.push(["county", `${$("county").value} County`]);
+  if (+$("minYears").value) chips.push(["minYears", $("minYears").selectedOptions[0].text]);
+  if ($("built").value) chips.push(["built", $("built").selectedOptions[0].text]);
+  if ($("q").value.trim()) chips.push(["q", `“${$("q").value.trim()}”`]);
+  $("chips").innerHTML = chips.map(([k, t]) => `<span class="chip">${esc(t)}<button type="button" data-k="${k}" aria-label="Remove filter">✕</button></span>`).join("");
 }
 
-function tiles() {
-  const counts = {}; rows.forEach(r => counts[r._g] = (counts[r._g] || 0) + 1);
-  document.getElementById("tiles").innerHTML = GROUPS.filter(([g]) => !g || counts[g]).map(([g, label]) =>
-    `<button class="tile" type="button" data-g="${g}"><b>${(g ? counts[g] : rows.length).toLocaleString()}</b><span>${label}</span></button>`).join("");
+function openDrawer(r) {
+  current = r;
+  const cty = counties[r.county] || {};
+  $("dBadge").innerHTML = badge(r);
+  $("dTitle").textContent = nice(r.owner);
+  $("dSub").textContent = `${place(r)} · ${r.county} County`;
+  const facts = [
+    ["Parcel", `<span class="mono">${esc(r.parcel)}</span>`], ["Status", esc(r.category)],
+    ["Property address", r.property_address ? esc(nice(r.property_address)) : null], ["Legal description", r.legal ? esc(r.legal) : null],
+    ["Area", r.location ? esc(nice(r.location)) : null], ["Acres", r.acres ? (+r.acres).toFixed(2) : null],
+    ["Year built", r.year_built || null], ["Living area", r.living_sqft ? `${num.format(r.living_sqft)} sq ft` : null],
+    ["Assessed value", r.assessed_value ? usd.format(r.assessed_value) : null], ["Unpaid since", r.oldest_unpaid || null],
+    ["Last sale / acquired", r.last_sale ? new Date(r.last_sale + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null],
+    ["Second owner line", r.owner2 ? esc(nice(r.owner2)) : null],
+  ].filter(([, v]) => v);
+  const links = [
+    mapUrl(r) && `<a class="btn primary" href="${mapUrl(r)}" target="_blank" rel="noopener">View parcel on the county map</a>`,
+    r.property_address && `<a class="btn" href="https://www.google.com/maps/search/${encodeURIComponent(r.property_address + ", " + r.county + " County, MO")}" target="_blank" rel="noopener">Open in Google Maps</a>`,
+    cty.collector && `<a class="btn" href="${cty.collector}" target="_blank" rel="noopener">${esc(r.county)} County collector</a>`,
+    `<button class="btn" id="copyParcel" type="button">Copy parcel number</button>`,
+  ].filter(Boolean).join("");
+  $("dBody").innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><small>Taxes owed</small><strong>${r.total_due ? usd.format(r.total_due) : "–"}</strong></div>
+      <div class="kpi"><small>Years unpaid</small><strong>${r.years_unpaid || "–"}</strong></div>
+    </div>
+    <dl class="facts">${facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
+    <div class="actions">${links}</div>
+    <div class="note">Public record from ${esc(r.county)} County. Verify ownership, amounts and redemption status with the county before acting.</div>`;
+  $("copyParcel").onclick = e => { navigator.clipboard?.writeText(r.parcel); e.target.textContent = "Copied"; };
+  document.body.classList.add("open");
+  $("dClose").focus();
+}
+function closeDrawer() { document.body.classList.remove("open"); current = null; }
+
+function stats() {
+  const c = {};
+  rows.forEach(r => { c[r._g] = (c[r._g] || 0) + 1; });
+  const cards = [["", rows.length, "Properties tracked"], ["reo", c.reo || 0, "Recent foreclosures"], ["gov", c.gov || 0, "HUD / VA owned"],
+                 ["delq", c.delq || 0, "2+ years unpaid"], ["sale", c.sale || 0, "Unsold at tax sale"]];
+  $("stats").innerHTML = cards.map(([g, n, l]) => `<button class="stat" type="button" data-g="${g}"><strong>${num.format(n)}</strong><small>${l}</small></button>`).join("");
+  const byCounty = {}; rows.forEach(r => byCounty[r.county] = (byCounty[r.county] || 0) + 1);
+  $("coverageBody").innerHTML = Object.keys(counties).sort().map(k => `<tr><td><b>${esc(k)}</b></td><td>${esc(counties[k].coverage || "")}</td>
+    <td class="num">${num.format(byCounty[k] || 0)}</td><td>${counties[k].collector ? `<a href="${counties[k].collector}" target="_blank" rel="noopener">Website</a>` : "–"}</td></tr>`).join("");
 }
 
 function csv() {
-  const cols = Object.keys(rows[0] || {}).filter(k => !k.startsWith("_"));
+  const cols = ["county", "category", "parcel", "owner", "owner2", "property_address", "location", "legal", "acres", "year_built",
+                "living_sqft", "assessed_value", "years_unpaid", "oldest_unpaid", "total_due", "last_sale"];
   const q = v => v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
   const text = [cols.join(","), ...view.map(r => cols.map(c => q(r[c])).join(","))].join("\n");
-  const a = Object.assign(document.createElement("a"), {
-    href: URL.createObjectURL(new Blob([text], { type: "text/csv" })), download: "camden-property-leads.csv" });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([text], { type: "text/csv" })), download: "lakeleads-properties.csv" });
   a.click(); URL.revokeObjectURL(a.href);
 }
 
-document.querySelector("#t thead").addEventListener("click", e => {
+$("stats").addEventListener("click", e => { const s = e.target.closest(".stat"); if (s) { group = s.dataset.g; page = 0; apply(); } });
+["q", "county", "minYears", "built"].forEach(id => $(id).addEventListener("input", () => { page = 0; apply(); }));
+$("sort").addEventListener("input", () => { const [k, d] = $("sort").value.split(":"); sortKey = k; sortDir = +d; apply(); });
+document.querySelector("thead").addEventListener("click", e => {
   const k = e.target.closest("th")?.dataset.k; if (!k) return;
-  sortDir = k === sortKey ? -sortDir : (COLUMNS.find(c => c.key === k).num ? -1 : 1); sortKey = k; apply();
+  sortDir = k === sortKey ? -sortDir : (["owner", "county", "category"].includes(k) ? 1 : -1); sortKey = k; apply();
 });
-document.getElementById("tiles").addEventListener("click", e => {
-  const t = e.target.closest(".tile"); if (!t) return; group = t.dataset.g; page = 0; apply();
-});
-["q", "minYears", "built"].forEach(id => document.getElementById(id).addEventListener("input", () => { page = 0; apply(); }));
-document.getElementById("prev").onclick = () => { page--; render(); window.scrollTo(0, 0); };
-document.getElementById("next").onclick = () => { page++; render(); window.scrollTo(0, 0); };
-document.getElementById("csv").onclick = csv;
+$("chips").addEventListener("click", e => { const k = e.target.dataset?.k; if (!k) return; $(k).value = k === "minYears" ? "0" : ""; page = 0; apply(); });
+const pick = e => { const el = e.target.closest("[data-i]"); if (el) openDrawer(view[+el.dataset.i]); };
+$("tbody").addEventListener("click", pick); $("cards").addEventListener("click", pick);
+$("cards").addEventListener("keydown", e => { if (e.key === "Enter") pick(e); });
+$("scrim").onclick = closeDrawer; $("dClose").onclick = closeDrawer;
+document.addEventListener("keydown", e => { if (e.key === "Escape" && current) closeDrawer(); });
+$("prev").onclick = () => { page--; render(); $("properties").scrollIntoView(); };
+$("next").onclick = () => { page++; render(); $("properties").scrollIntoView(); };
+$("csv").onclick = csv;
 
 fetch("data.json", { cache: "no-cache" }).then(r => r.json()).then(d => {
-  document.getElementById("updated").textContent = `Updated ${new Date(d.updated + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`;
-  rows = d.rows.map(r => ({ ...r, _g: groupOf(r.category),
-    _text: [r.owner, r.owner2, r.parcel, r.property_address, r.legal, r.location].join(" ").toLowerCase() }));
-  tiles(); apply();
-}).catch(() => { document.getElementById("count").textContent = "Couldn't load the data."; });
+  $("updated").textContent = new Date(d.updated + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  counties = d.counties || {};
+  if (!d.counties && d.maps) Object.entries(d.maps).forEach(([k, v]) => counties[k] = { map: v });
+  rows = d.rows.map(r => ({ ...r, _g: groupOf(r.category || ""),
+    _text: [r.county, r.owner, r.owner2, r.parcel, r.property_address, r.legal, r.location].join(" ").toLowerCase() }));
+  [...new Set(rows.map(r => r.county).filter(Boolean))].sort().forEach(c => $("county").add(new Option(`${c} County`, c)));
+  stats(); apply();
+}).catch(() => { $("count").textContent = "Couldn't load the property data. Please refresh."; });
 </script>
 </body>
 </html>
