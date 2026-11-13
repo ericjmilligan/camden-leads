@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LakeLeads · Bank-Owned &amp; Tax-Delinquent Property, Lake of the Ozarks</title>
+<title>Lake Ozark Leads · Bank-Owned &amp; Tax-Delinquent Property</title>
 <meta name="description" content="Bank-owned, HUD/VA and tax-delinquent properties across Camden, Miller, Morgan, Benton, Laclede and Dent counties, Missouri. Updated weekly from public county records.">
-<meta property="og:title" content="LakeLeads: Lake of the Ozarks property leads">
+<meta property="og:title" content="Lake Ozark Leads: bank-owned and tax-delinquent property">
 <meta property="og:description" content="Bank-owned and tax-delinquent properties from public county records, updated weekly.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b3b5c'/%3E%3Cpath d='M8 17l8-7 8 7v7H8z' fill='%23fff'/%3E%3Cpath d='M6 25c3-2 5-2 8 0s5 2 8 0 4-2 5-1' stroke='%2337c0c9' stroke-width='2' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -202,9 +202,9 @@ footer p { margin: 0 0 10px; }
 <body>
 <header class="top">
   <div class="wrap">
-    <a class="logo" href="#" aria-label="LakeLeads home">
+    <a class="logo" href="#" aria-label="Lake Ozark Leads home">
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0b3b5c"/><path d="M8 17l8-7 8 7v7H8z" fill="#fff"/><path d="M6 25c3-2 5-2 8 0s5 2 8 0 4-2 5-1" stroke="#37c0c9" stroke-width="2" fill="none"/></svg>
-      <span>Lake<b>Leads</b></span>
+      <span>Lake Ozark <b>Leads</b></span>
     </a>
     <nav aria-label="Sections">
       <a href="#properties">Properties</a>
@@ -294,7 +294,7 @@ footer p { margin: 0 0 10px; }
 <footer>
   <div class="wrap">
     <div>
-      <a class="logo" href="#" aria-label="LakeLeads home"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0b3b5c"/><path d="M8 17l8-7 8 7v7H8z" fill="#fff"/><path d="M6 25c3-2 5-2 8 0s5 2 8 0 4-2 5-1" stroke="#37c0c9" stroke-width="2" fill="none"/></svg><span>Lake<b>Leads</b></span></a>
+      <a class="logo" href="#" aria-label="Lake Ozark Leads home"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0b3b5c"/><path d="M8 17l8-7 8 7v7H8z" fill="#fff"/><path d="M6 25c3-2 5-2 8 0s5 2 8 0 4-2 5-1" stroke="#37c0c9" stroke-width="2" fill="none"/></svg><span>Lake Ozark <b>Leads</b></span></a>
       <p style="margin-top:12px">Property leads for the Lake of the Ozarks region, from public county records.</p>
     </div>
     <div>
@@ -438,7 +438,7 @@ function csv() {
                 "living_sqft", "assessed_value", "years_unpaid", "oldest_unpaid", "total_due", "last_sale"];
   const q = v => v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
   const text = [cols.join(","), ...view.map(r => cols.map(c => q(r[c])).join(","))].join("\n");
-  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([text], { type: "text/csv" })), download: "lakeleads-properties.csv" });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([text], { type: "text/csv" })), download: "lake-ozark-leads.csv" });
   a.click(); URL.revokeObjectURL(a.href);
 }
 
