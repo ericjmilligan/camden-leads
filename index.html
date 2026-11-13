@@ -11,6 +11,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css">
 <style>
 :root {
   --bg: #f6f8fa; --surface: #ffffff; --surface-2: #f1f4f7; --text: #0f1b2a; --muted: #5b6b7d; --faint: #8a98a8;
@@ -137,6 +140,29 @@ td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pager .btns { display: flex; gap: 8px; }
 .empty { padding: 48px 20px; text-align: center; color: var(--muted); }
 
+/* list / map toggle */
+.viewtoggle { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.viewtoggle button { all: unset; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); padding: 7px 14px; border-radius: 7px;
+                     display: inline-flex; align-items: center; gap: 6px; }
+.viewtoggle button svg { width: 15px; height: 15px; }
+.viewtoggle button[aria-pressed=true] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.rightbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mappanel { display: none; overflow: hidden; position: relative; z-index: 0; isolation: isolate; }   /* keep Leaflet's layers under the header and drawer */
+body.mapview .mappanel { display: block; }
+body.mapview .listpanel { display: none; }
+#map { height: 640px; width: 100%; background: var(--surface-2); }
+.mapnote { padding: 10px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+.legend { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.leaflet-popup-content-wrapper { border-radius: 12px; }
+.leaflet-popup-content { margin: 14px 16px; font: 14px/1.45 Inter, system-ui, sans-serif; min-width: 220px; }
+.pop .place { font-weight: 700; margin: 8px 0 2px; color: #0f1b2a; }
+.pop .sub { color: #5b6b7d; }
+.pop .figs { display: flex; gap: 16px; margin: 10px 0 12px; }
+.pop .figs small { display: block; color: #5b6b7d; font-size: 12px; }
+.pop .figs b { font-size: 15px; color: #0f1b2a; }
+.pop .btn { width: 100%; justify-content: center; background: #0b3b5c; border-color: #0b3b5c; color: #fff; }
+
 /* drawer */
 .scrim { position: fixed; inset: 0; background: rgba(8, 15, 24, .45); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 40; }
 .drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(480px, 100%); background: var(--surface); z-index: 41; visibility: hidden;
@@ -184,6 +210,7 @@ footer p { margin: 0 0 10px; }
   nav { display: none; }
 }
 @media (max-width: 760px) {
+  #map { height: 68vh; }
   .wrap { padding: 0 16px; }
   .hero .wrap { padding-top: 36px; }
   .stats { grid-template-columns: 1fr 1fr; }
@@ -228,7 +255,7 @@ footer p { margin: 0 0 10px; }
   <div class="panel toolbar">
     <label class="field search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-      <input type="search" id="q" placeholder="Search owner, address, parcel, subdivision" aria-label="Search">
+      <input type="search" id="q" placeholder="Search address, parcel, subdivision, owner" aria-label="Search">
     </label>
     <select id="county" aria-label="County"><option value="">All counties</option></select>
     <select id="minYears" aria-label="Years unpaid">
@@ -241,7 +268,7 @@ footer p { margin: 0 0 10px; }
     <select id="sort" aria-label="Sort">
       <option value="total_due:-1">Most taxes owed</option><option value="years_unpaid:-1">Most years unpaid</option>
       <option value="assessed_value:-1">Highest assessed value</option><option value="acres:-1">Largest acreage</option>
-      <option value="last_sale:-1">Recently acquired</option><option value="owner:1">Owner A–Z</option>
+      <option value="last_sale:-1">Recently acquired</option><option value="_place:1">Address A–Z</option>
     </select>
     <button class="btn primary" id="csv" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3"/></svg>Export CSV
@@ -250,13 +277,27 @@ footer p { margin: 0 0 10px; }
 
   <div class="resultbar">
     <div><h2 id="resultTitle">All properties</h2><div class="count" id="count">Loading…</div></div>
-    <div class="chips" id="chips"></div>
+    <div class="rightbar">
+      <div class="chips" id="chips"></div>
+      <div class="viewtoggle" role="group" aria-label="View">
+        <button type="button" id="listBtn" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>List</button>
+        <button type="button" id="mapBtn" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Map</button>
+      </div>
+    </div>
   </div>
 
-  <div class="panel tablewrap">
+  <div class="panel mappanel">
+    <div id="map" role="region" aria-label="Map of properties"></div>
+    <div class="mapnote"><span id="mapcount"></span>
+      <span class="legend"><i style="background:#6d3fc0"></i>Recent foreclosure</span><span class="legend"><i style="background:#b26b00"></i>HUD / VA</span>
+      <span class="legend"><i style="background:#c2412d"></i>2+ yrs unpaid</span><span class="legend"><i style="background:#8c1d18"></i>Unsold at tax sale</span>
+      <span class="legend"><i style="background:#4a5a6c"></i>Bank-owned</span></div>
+  </div>
+
+  <div class="panel tablewrap listpanel">
     <table>
       <thead><tr>
-        <th data-k="category">Status</th><th data-k="owner">Owner &amp; property</th><th data-k="county">County</th>
+        <th data-k="category">Status</th><th data-k="_place">Property</th><th data-k="county">County</th>
         <th data-k="acres" class="num">Acres</th><th data-k="assessed_value" class="num">Assessed</th>
         <th data-k="years_unpaid" class="num">Years unpaid</th><th data-k="total_due" class="num">Taxes owed</th>
       </tr></thead>
@@ -358,7 +399,7 @@ function render() {
   const slice = view.slice(page * PAGE, (page + 1) * PAGE);
   $("tbody").innerHTML = slice.map((r, i) => `<tr data-i="${page * PAGE + i}">
     <td>${badge(r)}</td>
-    <td><div class="owner">${esc(nice(r.owner))}</div><div class="sub">${esc(place(r))}</div><div class="mono">${esc(r.parcel)}</div></td>
+    <td><div class="owner">${esc(r._place)}</div>${r._detail ? `<div class="sub">${esc(r._detail)}</div>` : ""}<div class="mono">${esc(r.parcel)}</div></td>
     <td><span class="county">${esc(r.county)}</span></td>
     <td class="num">${r.acres ? (+r.acres).toFixed(2) : dash}</td>
     <td class="num">${r.assessed_value ? usd.format(r.assessed_value) : dash}</td>
@@ -366,7 +407,7 @@ function render() {
     <td class="num">${r.total_due ? `<span class="due">${usd.format(r.total_due)}</span>` : dash}</td>
   </tr>`).join("") || `<tr><td colspan="7"><div class="empty">No properties match these filters.</div></td></tr>`;
   $("cards").innerHTML = slice.map((r, i) => `<div class="card" data-i="${page * PAGE + i}" tabindex="0" role="button">
-    <div class="row1"><div><div class="owner">${esc(nice(r.owner))}</div><div class="sub">${esc(place(r))}</div></div>${badge(r)}</div>
+    <div class="row1"><div><div class="owner">${esc(r._place)}</div>${r._detail ? `<div class="sub">${esc(r._detail)}</div>` : ""}</div>${badge(r)}</div>
     <div class="meta"><span>${esc(r.county)} County</span>${r.total_due ? `<span>Owed <b>${usd.format(r.total_due)}</b></span>` : ""}
       ${r.years_unpaid ? `<span><b>${r.years_unpaid}</b> yrs unpaid</span>` : ""}${r.acres ? `<span><b>${(+r.acres).toFixed(2)}</b> ac</span>` : ""}</div>
   </div>`).join("") || `<div class="empty">No properties match these filters.</div>`;
@@ -384,6 +425,7 @@ function render() {
   if (+$("minYears").value) chips.push(["minYears", $("minYears").selectedOptions[0].text]);
   if ($("built").value) chips.push(["built", $("built").selectedOptions[0].text]);
   if ($("q").value.trim()) chips.push(["q", `“${$("q").value.trim()}”`]);
+  if (document.body.classList.contains("mapview")) drawMap();
   $("chips").innerHTML = chips.map(([k, t]) => `<span class="chip">${esc(t)}<button type="button" data-k="${k}" aria-label="Remove filter">✕</button></span>`).join("");
 }
 
@@ -391,16 +433,16 @@ function openDrawer(r) {
   current = r;
   const cty = counties[r.county] || {};
   $("dBadge").innerHTML = badge(r);
-  $("dTitle").textContent = nice(r.owner);
-  $("dSub").textContent = `${place(r)} · ${r.county} County`;
+  $("dTitle").textContent = r._place;
+  $("dSub").textContent = `${r._detail ? r._detail + " · " : ""}${r.county} County`;
   const facts = [
+    ["Owner", `<b>${esc(nice(r.owner))}</b>`], ["Second owner line", r.owner2 ? esc(nice(r.owner2)) : null],
     ["Parcel", `<span class="mono">${esc(r.parcel)}</span>`], ["Status", esc(r.category)],
     ["Property address", r.property_address ? esc(nice(r.property_address)) : null], ["Legal description", r.legal ? esc(r.legal) : null],
     ["Area", r.location ? esc(nice(r.location)) : null], ["Acres", r.acres ? (+r.acres).toFixed(2) : null],
     ["Year built", r.year_built || null], ["Living area", r.living_sqft ? `${num.format(r.living_sqft)} sq ft` : null],
     ["Assessed value", r.assessed_value ? usd.format(r.assessed_value) : null], ["Unpaid since", r.oldest_unpaid || null],
     ["Last sale / acquired", r.last_sale ? new Date(r.last_sale + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null],
-    ["Second owner line", r.owner2 ? esc(nice(r.owner2)) : null],
   ].filter(([, v]) => v);
   const links = [
     mapUrl(r) && `<a class="btn primary" href="${mapUrl(r)}" target="_blank" rel="noopener">View parcel on the county map</a>`,
@@ -433,8 +475,51 @@ function stats() {
     <td class="num">${num.format(byCounty[k] || 0)}</td><td>${counties[k].collector ? `<a href="${counties[k].collector}" target="_blank" rel="noopener">Website</a>` : "–"}</td></tr>`).join("");
 }
 
+const COLORS = { reo: "#6d3fc0", gov: "#b26b00", delq: "#c2412d", sale: "#8c1d18", bank: "#4a5a6c" };
+let map = null, cluster = null;
+function setView(v) {
+  document.body.classList.toggle("mapview", v === "map");
+  $("listBtn").setAttribute("aria-pressed", v !== "map"); $("mapBtn").setAttribute("aria-pressed", v === "map");
+  history.replaceState(null, "", v === "map" ? "#map" : location.pathname);
+  if (v === "map") drawMap(true);
+}
+function drawMap(fit) {
+  if (typeof L === "undefined") { $("mapcount").textContent = "The map couldn't load. Check your connection and refresh."; return; }
+  if (!map) {
+    map = L.map("map", { scrollWheelZoom: true }).setView([38.1, -92.75], 9);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
+    cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45, spiderfyOnMaxZoom: true });
+    map.addLayer(cluster);
+    fit = true;
+  }
+  map.invalidateSize();
+  cluster.clearLayers();
+  const pts = view.filter(r => r.lat && r.lon);
+  cluster.addLayers(pts.map(r => {
+    const m = L.circleMarker([r.lat, r.lon], { radius: 7, weight: 2, color: "#fff", fillColor: COLORS[r._g], fillOpacity: .95 });
+    m.bindPopup(() => {
+      const el = document.createElement("div"); el.className = "pop";
+      el.innerHTML = `${badge(r)}<div class="place">${esc(r._place)}</div><div class="sub">${esc(r.county)} County</div>
+        <div class="figs"><div><small>Taxes owed</small><b>${r.total_due ? usd.format(r.total_due) : "–"}</b></div>
+        <div><small>Years unpaid</small><b>${r.years_unpaid || "–"}</b></div>${r.acres ? `<div><small>Acres</small><b>${(+r.acres).toFixed(2)}</b></div>` : ""}</div>
+        <button class="btn" type="button">View details</button>`;
+      el.querySelector("button").onclick = () => { map.closePopup(); openDrawer(r); };
+      return el;
+    });
+    return m;
+  }));
+  const missing = view.length - pts.length;
+  $("mapcount").textContent = `${num.format(pts.length)} properties on the map${missing ? ` (${num.format(missing)} without a mapped location)` : ""}`;
+  if (fit && pts.length) map.fitBounds(L.latLngBounds(pts.map(r => [r.lat, r.lon])), { padding: [30, 30], maxZoom: 15 });
+}
+$("listBtn").onclick = () => setView("list");
+$("mapBtn").onclick = () => setView("map");
+["county", "minYears", "built"].forEach(id => $(id).addEventListener("input", () => { if (map) setTimeout(() => drawMap(true), 0); }));
+document.addEventListener("click", e => { if (e.target.closest("#stats .stat") && map) setTimeout(() => drawMap(true), 0); });
+
 function csv() {
-  const cols = ["county", "category", "parcel", "owner", "owner2", "property_address", "location", "legal", "acres", "year_built",
+  const cols = ["county", "category", "parcel", "property_address", "location", "legal", "acres", "year_built",
                 "living_sqft", "assessed_value", "years_unpaid", "oldest_unpaid", "total_due", "last_sale"];
   const q = v => v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
   const text = [cols.join(","), ...view.map(r => cols.map(c => q(r[c])).join(","))].join("\n");
@@ -464,10 +549,15 @@ fetch("data.json", { cache: "no-cache" }).then(r => r.json()).then(d => {
   counties = d.counties || {};
   if (!d.counties && d.maps) Object.entries(d.maps).forEach(([k, v]) => counties[k] = { map: v });
   rows = d.rows.map(r => ({ ...r, _g: groupOf(r.category || ""),
+    _place: r.property_address ? nice(r.property_address) : (r.legal || `Parcel ${r.parcel}`),
+    _detail: r.property_address ? (r.legal || "") : (r.location ? nice(r.location) : ""),
     _text: [r.county, r.owner, r.owner2, r.parcel, r.property_address, r.legal, r.location].join(" ").toLowerCase() }));
   [...new Set(rows.map(r => r.county).filter(Boolean))].sort().forEach(c => $("county").add(new Option(`${c} County`, c)));
   stats(); apply();
+  if (location.hash === "#map") setView("map");
 }).catch(() => { $("count").textContent = "Couldn't load the property data. Please refresh."; });
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
 </body>
 </html>
