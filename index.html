@@ -122,6 +122,10 @@ td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .due { font-weight: 700; }
 .none { color: var(--faint); }
 .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.tag { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); white-space: nowrap; }
+.tag.lake { color: #0b6f86; background: #e3f4f8; border-color: #bfe3ec; }
+@media (prefers-color-scheme: dark) { .tag.lake { color: #7fd3e6; background: #12303a; border-color: #1d4a57; } }
 .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .b-reo { color: var(--reo); background: var(--reo-bg); } .b-gov { color: var(--gov); background: var(--gov-bg); }
 .b-delq { color: var(--delq); background: var(--delq-bg); } .b-sale { color: var(--sale); background: var(--sale-bg); }
@@ -282,7 +286,8 @@ footer p { margin: 0 0 10px; }
       <option value="5-10">5 – 10 acres</option><option value="10-40">10 – 40 acres</option><option value="40-">40+ acres</option>
     </select>
     <select id="built" aria-label="Property type">
-      <option value="">Land &amp; buildings</option><option value="house">Has a building</option><option value="land">Land only</option>
+      <option value="">Land &amp; buildings</option><option value="house">Has a building</option><option value="land">Vacant land</option>
+      <option value="lake">Lakefront</option>
     </select>
     <select id="sort" aria-label="Sort">
       <option value="total_due:-1">Most taxes owed</option><option value="years_unpaid:-1">Most years unpaid</option>
@@ -398,6 +403,17 @@ const mapUrl = r => { const m = (counties[r.county] || {}).map;
   return m ? m.replace("{parcel}", encodeURIComponent(r.parcel)).replace("{digits}", r.parcel.replace(/\D/g, "")) : ""; };
 const place = r => r.property_address ? nice(r.property_address) : (r.legal || "No street address on record");
 const dash = '<span class="none">–</span>';
+const builtLabel = r => {
+  if (r.improved === false) return "Vacant land";
+  if (r.improved !== true) return "";
+  const kind = (r.structure || "").split(" · ")[0];
+  if (!kind || /land$/i.test(kind)) return "Has a building";
+  return /home|housing|family|condo|duplex|unit|building/i.test(kind) ? kind : `${kind} building`;   // "Residential" -> "Residential building"
+};
+const tags = r => {
+  const t = [builtLabel(r) && `<span class="tag">${esc(builtLabel(r))}</span>`, r.lakefront && `<span class="tag lake">Lakefront</span>`].filter(Boolean);
+  return t.length ? `<div class="tags">${t.join("")}</div>` : "";
+};
 
 function apply() {
   const q = $("q").value.trim().toLowerCase(), county = $("county").value, minYears = +$("minYears").value, built = $("built").value;
@@ -405,7 +421,7 @@ function apply() {
   view = rows.filter(r => (!group || r._g === group) && (!county || r.county === county)
     && (!minYears || (r.years_unpaid || 0) >= minYears)
     && (loAc === null || (r.acres != null && r.acres >= loAc && r.acres < hiAc))
-    && (!built || (built === "house") === !!(r.year_built || r.living_sqft))
+    && (!built || (built === "house" && r.improved === true) || (built === "land" && r.improved === false) || (built === "lake" && r.lakefront === true))
     && (!q || r._text.includes(q)));
   view.sort((a, b) => {
     const x = a[sortKey], y = b[sortKey];
@@ -420,7 +436,7 @@ function render() {
   const slice = view.slice(page * PAGE, (page + 1) * PAGE);
   $("tbody").innerHTML = slice.map((r, i) => `<tr data-i="${page * PAGE + i}">
     <td>${badge(r)}</td>
-    <td><div class="owner">${esc(r._place)}</div>${r._detail ? `<div class="sub">${esc(r._detail)}</div>` : ""}<div class="mono">${esc(r.parcel)}</div></td>
+    <td><div class="owner">${esc(r._place)}</div>${r._detail ? `<div class="sub">${esc(r._detail)}</div>` : ""}<div class="mono">${esc(r.parcel)}</div>${tags(r)}</td>
     <td><span class="county">${esc(r.county)}</span></td>
     <td class="num">${r.acres ? (+r.acres).toFixed(2) : dash}</td>
     <td class="num">${r.assessed_value ? usd.format(r.assessed_value) : dash}</td>
@@ -428,7 +444,7 @@ function render() {
     <td class="num">${r.total_due ? `<span class="due">${usd.format(r.total_due)}</span>` : dash}</td>
   </tr>`).join("") || `<tr><td colspan="7"><div class="empty">No properties match these filters.</div></td></tr>`;
   $("cards").innerHTML = slice.map((r, i) => `<div class="card" data-i="${page * PAGE + i}" tabindex="0" role="button">
-    <div class="row1"><div><div class="owner">${esc(r._place)}</div>${r._detail ? `<div class="sub">${esc(r._detail)}</div>` : ""}</div>${badge(r)}</div>
+    <div class="row1"><div><div class="owner">${esc(r._place)}</div>${r._detail ? `<div class="sub">${esc(r._detail)}</div>` : ""}${tags(r)}</div>${badge(r)}</div>
     <div class="meta"><span>${esc(r.county)} County</span>${r.total_due ? `<span>Owed <b>${usd.format(r.total_due)}</b></span>` : ""}
       ${r.years_unpaid ? `<span><b>${r.years_unpaid}</b> yrs unpaid</span>` : ""}${r.acres ? `<span><b>${(+r.acres).toFixed(2)}</b> ac</span>` : ""}</div>
   </div>`).join("") || `<div class="empty">No properties match these filters.</div>`;
@@ -460,6 +476,9 @@ function openDrawer(r) {
   const facts = [
     ["Owner", `<b>${esc(nice(r.owner))}</b>`], ["Second owner line", r.owner2 ? esc(nice(r.owner2)) : null],
     ["Parcel", `<span class="mono">${esc(r.parcel)}</span>`], ["Status", esc(r.category)],
+    ["Improvements", r.improved === true ? `Has a building${r.structure ? ` (${esc(r.structure)})` : ""}` : r.improved === false ? `Vacant land${r.structure ? ` (${esc(r.structure)})` : ""}` : "Not recorded by this county"],
+    ["Lakefront", r.lakefront ? "Yes" : null],
+    ["Utilities", "Not in county records. Check with the electric co-op, water/sewer district or the county planning office."],
     ["Property address", r.property_address ? esc(nice(r.property_address)) : null], ["Legal description", r.legal ? esc(r.legal) : null],
     ["Area", r.location ? esc(nice(r.location)) : null], ["Acres", r.acres ? (+r.acres).toFixed(2) : null],
     ["Year built", r.year_built || null], ["Living area", r.living_sqft ? `${num.format(r.living_sqft)} sq ft` : null],
@@ -553,7 +572,7 @@ function drawMap(fit) {
     const m = L.circleMarker([r.lat, r.lon], { radius: 7, weight: 2, color: "#fff", fillColor: COLORS[r._g], fillOpacity: .95 });
     m.bindPopup(() => {
       const el = document.createElement("div"); el.className = "pop";
-      el.innerHTML = `${badge(r)}<div class="place">${esc(r._place)}</div><div class="sub">${esc(r.county)} County</div>
+      el.innerHTML = `${badge(r)}<div class="place">${esc(r._place)}</div><div class="sub">${esc(r.county)} County${builtLabel(r) ? " · " + esc(builtLabel(r)) : ""}${r.lakefront ? " · Lakefront" : ""}</div>
         <div class="figs"><div><small>Taxes owed</small><b>${r.total_due ? usd.format(r.total_due) : "–"}</b></div>
         <div><small>Years unpaid</small><b>${r.years_unpaid || "–"}</b></div>${r.acres ? `<div><small>Acres</small><b>${(+r.acres).toFixed(2)}</b></div>` : ""}</div>
         <button class="btn" type="button">View details</button>`;
@@ -577,7 +596,7 @@ document.addEventListener("click", e => { if (e.target.closest("#stats .stat") &
 
 function csv() {
   const cols = ["county", "category", "parcel", "property_address", "location", "legal", "acres", "year_built",
-                "living_sqft", "assessed_value", "years_unpaid", "oldest_unpaid", "total_due", "last_sale"];
+                "living_sqft", "improved", "structure", "lakefront", "assessed_value", "years_unpaid", "oldest_unpaid", "total_due", "last_sale"];
   const q = v => v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
   const text = [cols.join(","), ...view.map(r => cols.map(c => q(r[c])).join(","))].join("\n");
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([text], { type: "text/csv" })), download: "lake-ozark-leads.csv" });
