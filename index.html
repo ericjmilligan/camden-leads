@@ -52,7 +52,9 @@ a:hover { text-decoration: underline; }
 nav { display: flex; gap: 22px; margin-left: 12px; }
 nav a { color: var(--muted); font-weight: 500; font-size: 14px; }
 nav a:hover { color: var(--text); text-decoration: none; }
-.updated { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);
+.headmap { margin-left: auto; padding: 8px 14px; }
+.headmap svg { color: var(--brand-2); }
+.updated { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);
            background: var(--surface-2); border: 1px solid var(--line); padding: 6px 12px; border-radius: 99px; white-space: nowrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: #1f9d6b; box-shadow: 0 0 0 3px color-mix(in srgb, #1f9d6b 25%, transparent); }
 
@@ -209,6 +211,7 @@ footer p { margin: 0 0 10px; }
   .grid4 { grid-template-columns: 1fr 1fr; }
   nav { display: none; }
 }
+@media (max-width: 440px) { .updated { display: none; } }
 @media (max-width: 760px) {
   #map { height: 68vh; }
   .wrap { padding: 0 16px; }
@@ -221,6 +224,10 @@ footer p { margin: 0 0 10px; }
   .grid3, .grid4 { grid-template-columns: 1fr; }
   footer .wrap { grid-template-columns: 1fr; }
   .updated .long { display: none; }
+  .top .wrap { gap: 10px; }
+  .logo { font-size: 16px; white-space: nowrap; }
+  .logo svg { width: 28px; height: 28px; }
+  .updated { padding: 6px 10px; }
   dl.facts { grid-template-columns: 110px 1fr; }
   .coverage td:nth-child(4), .coverage th:nth-child(4) { display: none; }
 }
@@ -238,6 +245,7 @@ footer p { margin: 0 0 10px; }
       <a href="#how">How it works</a>
       <a href="#coverage">Coverage</a>
     </nav>
+    <button class="btn headmap" id="headMap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg><span id="headMapLabel">Map</span></button>
     <div class="updated"><span class="dot" aria-hidden="true"></span><span class="long">Data updated&nbsp;</span><span id="updated">…</span></div>
   </div>
 </header>
@@ -480,6 +488,7 @@ let map = null, cluster = null;
 function setView(v) {
   document.body.classList.toggle("mapview", v === "map");
   $("listBtn").setAttribute("aria-pressed", v !== "map"); $("mapBtn").setAttribute("aria-pressed", v === "map");
+  $("headMapLabel").textContent = v === "map" ? "List" : "Map";
   history.replaceState(null, "", v === "map" ? "#map" : location.pathname);
   if (v === "map") drawMap(true);
 }
@@ -513,6 +522,10 @@ function drawMap(fit) {
   $("mapcount").textContent = `${num.format(pts.length)} properties on the map${missing ? ` (${num.format(missing)} without a mapped location)` : ""}`;
   if (fit && pts.length) map.fitBounds(L.latLngBounds(pts.map(r => [r.lat, r.lon])), { padding: [30, 30], maxZoom: 15 });
 }
+$("headMap").onclick = () => {
+  setView(document.body.classList.contains("mapview") ? "list" : "map");
+  $("properties").scrollIntoView();
+};
 $("listBtn").onclick = () => setView("list");
 $("mapBtn").onclick = () => setView("map");
 ["county", "minYears", "built"].forEach(id => $(id).addEventListener("input", () => { if (map) setTimeout(() => drawMap(true), 0); }));
