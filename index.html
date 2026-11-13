@@ -186,6 +186,13 @@ dl.facts dt { color: var(--muted); }
 dl.facts dd { margin: 0; overflow-wrap: anywhere; }
 .actions { display: grid; gap: 8px; }
 .actions .btn { justify-content: center; }
+.howbuy { border: 1px solid var(--line); border-left: 4px solid var(--brand-2); border-radius: 10px; padding: 14px 16px; margin: 0 0 20px; }
+.howbuy h4 { margin: 0 0 6px; font-size: 14px; }
+.howbuy p, .howbuy li { font-size: 13.5px; color: var(--muted); margin: 0; }
+.howbuy ul { margin: 6px 0 0; padding-left: 18px; }
+.howbuy li + li { margin-top: 4px; }
+.listing { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sectionlabel { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 4px 0 8px; }
 .note { font-size: 12.5px; color: var(--muted); background: var(--surface-2); border-radius: 10px; padding: 12px 14px; margin-top: 18px; }
 
 /* sections */
@@ -325,7 +332,7 @@ footer p { margin: 0 0 10px; }
     <div class="grid4">
       <div class="panel tile"><span class="badge b-reo">Recent foreclosure</span><h3>Bank-owned</h3><p>Title held by a bank, mortgage servicer or credit union, acquired in the last three years. Usually a foreclosure (REO).</p></div>
       <div class="panel tile"><span class="badge b-gov">HUD / VA</span><h3>Government-owned</h3><p>Homes held by HUD, the VA, Fannie Mae or Freddie Mac after a foreclosure. Usually sold through agency listing sites.</p></div>
-      <div class="panel tile"><span class="badge b-delq">2+ yrs unpaid</span><h3>Tax-delinquent</h3><p>Two or more years of property taxes unpaid. Owners are often motivated, and the parcel may go to the August tax sale.</p></div>
+      <div class="panel tile"><span class="badge b-delq">2+ yrs unpaid</span><h3>Tax-delinquent</h3><p>Two or more years of property taxes unpaid. Paying them doesn't make it yours: buy from the owner, or bid at the August tax sale.</p></div>
       <div class="panel tile"><span class="badge b-sale">Unsold at tax sale</span><h3>Fourth-sale list</h3><p>Offered at three tax sales with no buyer. Missouri residents can request these at the county collector's office.</p></div>
     </div>
     <div class="grid3" style="margin-top:16px">
@@ -459,6 +466,12 @@ function openDrawer(r) {
     ["Assessed value", r.assessed_value ? usd.format(r.assessed_value) : null], ["Unpaid since", r.oldest_unpaid || null],
     ["Last sale / acquired", r.last_sale ? new Date(r.last_sale + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null],
   ].filter(([, v]) => v);
+  // Listing searches need a house number; a bare road name ("Sweetwater Drive") can't find one property
+  const where = /^\d/.test(r.property_address || "") ? `${nice(r.property_address)}, ${r.county} County, MO` : "";
+  const listing = where ? `<div class="sectionlabel">Is it for sale?</div><div class="listing">
+      <a class="btn" href="https://www.zillow.com/homes/${encodeURIComponent(where.replace(/,/g, "")).replace(/%20/g, "-")}_rb/" target="_blank" rel="noopener">Check Zillow</a>
+      <a class="btn" href="https://www.google.com/search?q=${encodeURIComponent('"' + nice(r.property_address) + '" ' + r.county + ' County MO site:realtor.com')}" target="_blank" rel="noopener">Check Realtor.com</a>
+    </div><div style="height:16px"></div>` : "";
   const links = [
     mapUrl(r) && `<a class="btn primary" href="${mapUrl(r)}" target="_blank" rel="noopener">View parcel on the county map</a>`,
     r.property_address && `<a class="btn" href="https://www.google.com/maps/search/${encodeURIComponent(r.property_address + ", " + r.county + " County, MO")}" target="_blank" rel="noopener">Open in Google Maps</a>`,
@@ -471,12 +484,35 @@ function openDrawer(r) {
       <div class="kpi"><small>Taxes owed</small><strong>${r.total_due ? usd.format(r.total_due) : "–"}</strong></div>
       <div class="kpi"><small>Years unpaid</small><strong>${r.years_unpaid || "–"}</strong></div>
     </div>
+    ${howToBuy(r)}
+    ${listing}
     <dl class="facts">${facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
     <div class="actions">${links}</div>
     <div class="note">Public record from ${esc(r.county)} County. Verify ownership, amounts and redemption status with the county before acting.</div>`;
   $("copyParcel").onclick = e => { navigator.clipboard?.writeText(r.parcel); e.target.textContent = "Copied"; };
   document.body.classList.add("open");
   $("dClose").focus();
+}
+function howToBuy(r) {
+  const owner = (r.owner || "").toUpperCase();
+  const box = (title, body) => `<div class="howbuy"><h4>${title}</h4>${body}</div>`;
+  if (r._g === "gov") {
+    if (/HOUSING|HUD/.test(owner)) return box("How you could buy it",
+      `<p>HUD sells its homes through HUD Home Store, usually by online bid through a real-estate agent.</p><ul><li><a href="https://www.hudhomestore.gov" target="_blank" rel="noopener">Search HUD Home Store</a></li></ul>`);
+    if (/FEDERAL NATIONAL|FANNIE/.test(owner)) return box("How you could buy it",
+      `<p>Fannie Mae sells its foreclosures through HomePath, listed with local agents.</p><ul><li><a href="https://homepath.fanniemae.com" target="_blank" rel="noopener">Search HomePath</a></li></ul>`);
+    return box("How you could buy it", `<p>Government-owned homes (VA, Freddie Mac) are sold through listing agents. Check Zillow and Realtor.com below, or ask a local agent.</p>`);
+  }
+  if (r._g === "reo" || r._g === "bank") return box("How you could buy it",
+    `<p>The bank owns it. Foreclosed homes are usually listed with a local agent; if it isn't listed, call the bank and ask for its REO (foreclosed property) department.</p>
+     ${r._g === "bank" ? "<p style='margin-top:6px'>Long-held bank parcels are often branch buildings, not for sale.</p>" : ""}`);
+  if (r._g === "sale") return box("How you could buy it",
+    `<ul><li>It went through three tax sales with no buyer. Missouri residents can ask the ${esc(r.county)} County collector about buying it from the post-sale list.</li>
+     <li>You may also contact the owner directly; they still hold title until a sale is completed.</li></ul>`);
+  return box("How you could buy it",
+    `<p><b>Paying the back taxes does not make it yours.</b> The owner still owns it. Your options:</p>
+     <ul><li><b>Buy from the owner.</b> Owners behind on taxes are often willing to sell; the back taxes are paid at closing.</li>
+     <li><b>Bid at the tax sale</b> (fourth Monday in August). You get a certificate, not the deed; the owner can still pay up and redeem it, and you must follow the notice rules before a collector's deed is issued.</li></ul>`);
 }
 function closeDrawer() { document.body.classList.remove("open"); current = null; }
 
